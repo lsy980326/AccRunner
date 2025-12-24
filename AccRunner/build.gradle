@@ -1,0 +1,64 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.1.11' // 안정적인 3.1.x 버전 사용
+    id 'io.spring.dependency-management' version '1.1.4'
+}
+
+group = 'com.accrunner'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    sourceCompatibility = '17'
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // 1. 웹 서버 및 API 개발용
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    // 2. 배치 처리용
+    implementation 'org.springframework.boot:spring-boot-starter-batch'
+    // 3. 데이터베이스 연동(JPA)용
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    // 4. 개발 편의성 및 유틸리티 ---
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    implementation 'com.cronutils:cron-utils:9.2.1'
+
+
+    // --- 데이터베이스 드라이버 ---
+    // 6. H2 (기본 DB, 메타데이터 저장용)
+    runtimeOnly 'com.h2database:h2'
+    // 7. Microsoft SQL Server (배치 작업 대상 DB)
+    runtimeOnly 'com.microsoft.sqlserver:mssql-jdbc'
+    // 8. SQL 로깅용 라이브러리 (선택사항이지만 추천)
+    implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4.1:1.16'
+
+    // --- 테스트 ---
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.batch:spring-batch-test'
+
+    // 명시적으로 HikariCP 버전 고정 (Boot 3.1.11 호환)
+    implementation 'com.zaxxer:HikariCP:5.0.1'
+
+    // SLF4J 바인더 누락 경고 방지 (부트가 자동 추가해야 하지만 환경에 따라 누락될 수 있어 보강)
+    runtimeOnly 'ch.qos.logback:logback-classic:1.4.14'
+
+    //fdgfdgdfgf
+
+
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

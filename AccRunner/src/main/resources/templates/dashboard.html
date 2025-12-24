@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>AccRunner - 배치 관리 대시보드</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 2em; background-color: #f8f9fa; color: #343a40; }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2 { color: #0056b3; }
+        form { border: 1px solid #dee2e6; padding: 1.5em; margin-bottom: 2em; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        th, td { border: 1px solid #dee2e6; padding: 12px; text-align: left; }
+        th { background-color: #e9ecef; }
+        .form-group { margin-bottom: 1.2em; }
+        label { display: block; margin-bottom: .5em; font-weight: bold; }
+        input, select, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ced4da; border-radius: 4px; }
+        textarea { resize: vertical; }
+        .btn { padding: 10px 18px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .btn-warning { background-color: #ffc107; color: #212529; }
+        .status-active { color: #28a745; font-weight: bold; }
+        .status-inactive { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1><a href="/" style="text-decoration: none; color: inherit;">AccRunner - 배치 관리 대시보드</a></h1>
+
+    <!-- 스케줄 Job 등록/수정 -->
+    <form th:action="@{/schedules}" th:object="${newJob}" method="post">
+        <h2>스케줄 Job 등록</h2>
+        <div class="form-group">
+            <label for="jobName">스케줄 이름</label>
+            <input type="text" id="jobName" th:field="*{jobName}" placeholder="예: 매일 사용자 통계" required>
+        </div>
+        <div class="form-group">
+            <label for="cronExpression">Cron 표현식</label>
+            <input type="text" id="cronExpression" th:field="*{cronExpression}" placeholder="예: 0 0 1 * * *" required>
+        </div>
+        <div class="form-group">
+            <label for="targetDbName">대상 DB</label>
+            <select id="targetDbName" th:field="*{targetDbName}" required>
+                <option value="">-- DB 선택 --</option>
+                <option th:each="dbName : ${dbNames}" th:value="${dbName}" th:text="${dbName}"></option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="sqlQuery">실행할 쿼리</label>
+            <textarea id="sqlQuery" rows="5" th:field="*{sqlQuery}" placeholder="-- 실행할 SQL 쿼리를 여기에 입력하세요." required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="description">설명</label>
+            <input type="text" id="description" th:field="*{description}" placeholder="이 스케줄에 대한 간단한 설명">
+        </div>
+        <button type="submit" class="btn btn-primary">저장</button>
+    </form>
+
+    <!-- 등록된 스케줄 목록 -->
+    <h2>등록된 스케줄 목록</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>스케줄 이름</th>
+            <th>대상 DB</th>
+            <th>Cron</th>
+            <th>설명</th>
+            <th>상태</th>
+            <th>관리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="job : ${jobs}" th:if="${!jobs.isEmpty()}">
+            <td th:text="${job.id}">1</td>
+            <td th:text="${job.jobName}">test</td>
+            <td th:text="${job.targetDbName}">sqlserver</td>
+            <td th:text="${job.cronExpression}">0/10 * * * * ?</td>
+            <td th:text="${job.description}">설명 예시</td>
+            <td>
+                <span th:if="${job.active}" class="status-active">활성</span>
+                <span th:unless="${job.active}" class="status-inactive">비활성</span>
+            </td>
+            <td>
+                <!-- 수동 실행 버튼 -->
+                <form th:action="@{'/schedules/' + ${job.id} + '/run'}" method="post" style="display:inline; margin-right:6px;">
+                    <button type="submit" class="btn btn-secondary">즉시 실행</button>
+                </form>
+                <!-- 활성/비활성 토글 버튼 -->
+                <form th:action="@{'/schedules/' + ${job.id} + '/toggle'}" method="post" style="display:inline;">
+                    <button type="submit" th:classappend=" ${job.active} ? 'btn-warning' : 'btn-primary'" class="btn" th:text="${job.active} ? '비활성화' : '활성화'"></button>
+                </form>
+            </td>
+        </tr>
+        <tr th:if="${jobs.isEmpty()}">
+            <td colspan="7" style="text-align: center;">등록된 스케줄이 없습니다.</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!-- 실행 이력 -->
+    <h2 style="margin-top: 2em;">최근 실행 이력</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>시작시간</th>
+            <th>종료시간</th>
+            <th>잡 이름</th>
+            <th>상태</th>
+            <th>소요(ms)</th>
+            <th>메시지</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="h : ${recentHistories}" th:if="${recentHistories != null and !recentHistories.isEmpty()}">
+            <td th:text="${h.id}">1</td>
+            <td th:text="${#temporals.format(h.startTime, 'yyyy-MM-dd HH:mm:ss')}">2025-01-01 00:00:00</td>
+            <td th:text="${h.endTime != null ? #temporals.format(h.endTime, 'yyyy-MM-dd HH:mm:ss') : '-'}">-</td>
+            <td th:text="${h.jobName}">sample</td>
+            <td>
+                <span th:classappend=" ${h.status.name() == 'COMPLETED'} ? 'status-active' : (${h.status.name() == 'FAILED'} ? 'status-inactive' : '')"
+                      th:text="${h.status}">COMPLETED</span>
+            </td>
+            <td th:text="${h.durationMs != null ? h.durationMs : '-'}">-</td>
+            <td th:text="${h.message}">message</td>
+        </tr>
+        <tr th:if="${recentHistories == null or recentHistories.isEmpty()}">
+            <td colspan="7" style="text-align: center;">실행 이력이 없습니다.</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>
